@@ -1,0 +1,80 @@
+eps: 0.5
+noise: 0.7550813375962908
+Probability of not flipping state 0.6224593312018546
+theta 0.02
+Final DP attacker success probability: 0.619645
+Estimated eps:  0.4880417062633977
+Final Correlation attacker success probability: 0.780645
+Estimated eps:  1.269429079075141
+
+
+theta 0.068
+Final DP attacker success probability: 0.623125
+Estimated eps:  0.502833573234653
+Final Correlation attacker success probability: 0.689445
+Estimated eps:  0.7975259067613217
+
+
+theta 0.116
+Final DP attacker success probability: 0.624415
+Estimated eps:  0.5083304009804637
+Final Correlation attacker success probability: 0.65477
+Estimated eps:  0.6400731673567084
+
+
+theta 0.164
+Final DP attacker success probability: 0.621835
+Estimated eps:  0.4973441759218726
+Final Correlation attacker success probability: 0.630095
+Estimated eps:  0.532624385754298
+
+
+theta 0.212
+Final DP attacker success probability: 0.62245
+Estimated eps:  0.49996029357836025
+Final Correlation attacker success probability: 0.62173
+Estimated eps:  0.49689768854308863
+
+
+theta 0.26
+Final DP attacker success probability: 0.623655
+Estimated eps:  0.5050910549702106
+Final Correlation attacker success probability: 0.623655
+Estimated eps:  0.5050910549702106
+
+
+theta 0.30800000000000005
+Final DP attacker success probability: 0.624475
+Estimated eps:  0.5085862498545908
+Final Correlation attacker success probability: 0.624475
+Estimated eps:  0.5085862498545908
+
+
+theta 0.35600000000000004
+Final DP attacker success probability: 0.62428
+Estimated eps:  0.5077548005480379
+Final Correlation attacker success probability: 0.62428
+Estimated eps:  0.5077548005480379
+
+
+theta 0.404
+Final DP attacker success probability: 0.621995
+Estimated eps:  0.4980246310763282
+Final Correlation attacker success probability: 0.621995
+Estimated eps:  0.4980246310763282
+
+
+theta 0.452
+Final DP attacker success probability: 0.621775
+Estimated eps:  0.49708903433150525
+Final Correlation attacker success probability: 0.621775
+Estimated eps:  0.49708903433150525
+
+
+theta 0.5
+Final DP attacker success probability: 0.621955
+Estimated eps:  0.49785450670207904
+Final Correlation attacker success probability: 0.621955
+Estimated eps:  0.49785450670207904
+
+
