@@ -33,12 +33,6 @@ def emissions(latent_states, emission_probs):
 def dp_attack(observations, attack_state):
     return [obs[attack_state] for obs in observations]
 
-# Find the most likely last state by computing forwards probabilities
-# Todo: extend with forwards-backwards algorithm to arbitrary positions
-def correlation_attack(observations, attack_state, model):
-    # return [np.argmax(model.forward(obs)[-1]) for obs in observations]
-    return [np.argmax(model.states_confidence(obs)[attack_state]) for obs in observations]
-
 # Find the most likely value of the state at index "attack_state"
 def correlation_attack(observations, attack_state, model):
     return [np.argmax(model.states_confidence(obs)[attack_state]) for obs in observations]
