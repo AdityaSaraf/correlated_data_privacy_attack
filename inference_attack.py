@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 import hmms
 import sys
 import math
+import torch
+import lstm_attack
 
 def symmetric_hmm(theta, rho):
     transitions = np.array([[1-theta,theta],
@@ -59,8 +61,8 @@ if __name__ == "__main__":
     # The length of the Markov chain
     seq_len = 30
 
-    print('theta,suc_DP,suc_BDP,eps_DP,eps_BDP')
-    for theta in np.linspace(0.02, 0.5, 11):
+    print('theta,suc_DP,suc_BDP,suc_LSTM,eps_DP,eps_BDP,eps_LSTM')
+    for theta in np.linspace(0.02, 0.5, 10):
     # for theta in np.linspace(0.38, 0.5, 4):
         print('pf_noise:', pf_privacy_noise(theta, eps), 'at theta:', theta, file=sys.stderr)
         model = symmetric_hmm(theta, dp_noise)
@@ -68,13 +70,17 @@ if __name__ == "__main__":
         # latents = [np.full((100), 0, dtype=int)]
         attack_state = seq_len//2
 
+        training_data = (torch.tensor(latents, dtype=torch.float), torch.zeros((num_hidden_states, num_observations, seq_len)))
+        # print(training_data[1])
         dp_correct = 0
         corr_correct = 0
-        for latent in latents:
+        for idx, latent in enumerate(latents):
+            # print(latent)
             correct = latent[attack_state]
             observations = []
             for i in range(num_observations):
                 observations.append(emissions(latent, model.b))
+            training_data[1][idx] = torch.tensor(observations)
             dp_guesses = dp_attack(observations, attack_state)
             dp_correct += dp_guesses.count(correct)        
             corr_guesses = correlation_attack(observations, attack_state, model)
@@ -83,10 +89,13 @@ if __name__ == "__main__":
             # DP attacker's success probability should be close to 1 - noise/2
             # print('DP attacker success probability:', dp_guesses.count(correct)/num_observations, file=sys.stderr)
             # print('Correlation attacker success probability:', corr_guesses.count(correct)/num_observations, file=sys.stderr)
-        
+
+        training_data = list(zip(*training_data))
+        lstm_prob = lstm_attack.LSTMAttacker(training_data)
         # Logging information
         print('theta', theta, file=sys.stderr)
-
+        print('Final LSTM attacker success probability:', lstm_prob, file=sys.stderr)
+        print('Estimated eps: ', np.log(lstm_prob/(1-lstm_prob)), file=sys.stderr)
         dp_prob = dp_correct/(num_observations*num_hidden_states)
         print('Final DP attacker success probability:', dp_prob, file=sys.stderr)
         print('Estimated eps: ', np.log(dp_prob/(1-dp_prob)), file=sys.stderr)
@@ -94,10 +103,10 @@ if __name__ == "__main__":
         corr_prob = corr_correct/(num_observations*num_hidden_states)
         print('Final Correlation attacker success probability:', corr_prob, file=sys.stderr)
         print('Estimated eps: ', np.log(corr_prob/(1-corr_prob)), file=sys.stderr)
-        print('', file=sys.stderr)
+        # print('', file=sys.stderr)
         print('', file=sys.stderr)
         # Output
-        print(theta, dp_prob, corr_prob, np.log(dp_prob/(1-dp_prob)), np.log(corr_prob/(1-corr_prob)), sep=',')
+        print(theta, dp_prob, corr_prob, lstm_prob, np.log(dp_prob/(1-dp_prob)), np.log(corr_prob/(1-corr_prob)), np.log(lstm_prob/(1-lstm_prob)), sep=',')
 
     # Graphs the first observation
     # plt.rcParams['figure.figsize'] = [20,20]
