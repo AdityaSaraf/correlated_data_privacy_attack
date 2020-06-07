@@ -7,6 +7,7 @@ import hmms
 import inference_attack
 import BaumWelch
 import sys
+from hmmlearn import hmm as skh
 
 class BDPLSTM(nn.Module):
 
@@ -39,12 +40,13 @@ class BDPLSTM(nn.Module):
         return correct.float()/probs.size(0)    
 
 
+
 # training_data = [(N, 4), (N, 1)]
-def LSTMAttacker(trainloader, num_epochs=25):
+def LSTMAttacker(trainloader, testloader, num_epochs=15):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = BDPLSTM()
     model.to(device)
-    optimizer = optim.Adam(model.parameters(), lr=5e-4)
+    optimizer = optim.Adam(model.parameters(), lr=1e-4)
 
     for epoch in range(num_epochs):
         train_correct = 0.
@@ -65,11 +67,23 @@ def LSTMAttacker(trainloader, num_epochs=25):
         print(f"Loss after epoch {epoch} : {train_loss / len(trainloader)}")
         print(f"Accuracy after epoch {epoch} : {train_correct / train_seqs}")
 
-    return train_correct / train_seqs
+    test_acc = 0.
+    with torch.no_grad():
+        correct = 0
+        total = 0
+        for data in testloader:
+            x, y = data[0].to(device), data[1].to(device)
+            out = model(x)
+            total += len(x)
+            correct += (model.accuracy(out, y).item()) * len(out)
+        test_acc = correct/total
+
+    return train_correct / train_seqs, test_acc
 
 num_hidden_states = 1
 num_observations = 1
 seq_len = 10000
+test_len = 2000
 
 if __name__ == "__main__":
     eps = 0.5
@@ -84,9 +98,13 @@ if __name__ == "__main__":
     latents, _ = hmm.generate_data((num_hidden_states, seq_len))
     size = 20
 
+    latents_test, _ = hmm.generate_data((num_hidden_states, test_len))
+
     training_data_inputs = torch.zeros((num_hidden_states * (seq_len-(size)), size), dtype=torch.long)
     training_data_outputs = torch.zeros((num_hidden_states * (seq_len-(size)), 1),  dtype=torch.long)
     # collecting data
+    test_data_inputs = torch.zeros((num_hidden_states * (test_len-(size)), size), dtype=torch.long)
+    test_data_outputs = torch.zeros((num_hidden_states * (test_len-(size)), 1),  dtype=torch.long)
     for idx, latent in enumerate(latents):
         sanitized = inference_attack.emissions(latent, hmm.b)
         
@@ -95,15 +113,13 @@ if __name__ == "__main__":
         # np.save("sanitized", sanitized)
         # latent = np.load("latent.npy")
         # sanitized = np.load("sanitized.npy")
-        torch.manual_seed(0)
-        np.random.seed(0)
+
         
-        _, predictions = hmm.viterbi(sanitized)
-        count = np.sum(predictions == latent)
+        _, predictions = hmm.viterbi(sanitized[size//2:-size//2])
+        count = np.sum(predictions == latent[size//2:-size//2])
         print(f'Viterbi Accuracy (knows parameters): {count/seq_len}')
         
         # More accurate, but underflows (should just implement separate algo which maximizes only the transition probabilities)
-
         rho = dp_noise
         theta_hats = []
         for i in range(seq_len//750):
@@ -119,22 +135,23 @@ if __name__ == "__main__":
         print(f'P_hat = {p_hat}')
 
         custom_model: hmms.DtHMM = hmms.DtHMM(p_hat, emissions, pi)
-        _, predictions = custom_model.viterbi(sanitized)
-        count = np.sum(predictions == latent)
+        _, predictions = custom_model.viterbi(sanitized[size//2:-size//2])
+        count = np.sum(predictions == latent[size//2:-size//2])
         print(f'Viterbi Accuracy (learns parameters with custom BW): {count/seq_len}')
 
         for inner_idx in range(seq_len-size-2):
             training_data_inputs[idx*(seq_len-(size)) + inner_idx] = torch.tensor(sanitized[inner_idx:inner_idx+size])
             training_data_outputs[idx*(seq_len-(size)) + inner_idx] = torch.tensor(latent[inner_idx+size//2])
-        
-        # observations = []
-        # for i in range(num_observations):
-            # observations.append(inference_attack.emissions(latent, model.b))
-        # training_data[1][idx] = torch.tensor(observations)
     
+    for idx, latent in enumerate(latents_test):
+        sanitized = inference_attack.emissions(latent, hmm.b)
+        for inner_idx in range(test_len-size-2):
+            test_data_inputs[idx*(test_len-(size)) + inner_idx] = torch.tensor(sanitized[inner_idx:inner_idx+size])
+            test_data_outputs[idx*(test_len-(size)) + inner_idx] = torch.tensor(latent[inner_idx+size//2])
 
     training_data = list(zip(training_data_inputs, training_data_outputs))
-    trainloader = torch.utils.data.DataLoader(training_data, batch_size=16,
-                                        shuffle=True, num_workers=4)
-    lstm_accuracy = LSTMAttacker(trainloader)
-    print(f"LSTM accuracy: {lstm_accuracy}")
+    test_data = list(zip(test_data_inputs, test_data_outputs))
+    trainloader = torch.utils.data.DataLoader(training_data, batch_size=16, shuffle=True, num_workers=4)
+    testloader = torch.utils.data.DataLoader(test_data, batch_size=16, shuffle=False, num_workers=4)
+    train_acc, test_acc = LSTMAttacker(trainloader, testloader)
+    print(f"Train accuracy: {train_acc}, test accuracy: {test_acc}")
