@@ -65,13 +65,19 @@ def min_exp_noise(q, r, eps):
         intsect_right = line2.intersection(line_right)
     intsect = line1.intersection(line2)
     pts = [intsect, intsect_top, intsect_right]
+    exp_noise = np.zeros((3,))
+    for i, pt in enumerate(pts):
+        if isinstance(pt, Point):
+            exp_noise[i] = pt.x * r/(q+r) + pt.y * q/(q+r)
+        else:
+            exp_noise[i] = float('inf')
     # return intsect.x, intsect.y
-    exp_noise = np.fromiter(map(lambda pt: pt.x * r/(q+r) + pt.y * q/(q+r), pts), dtype=float)
     print(exp_noise)
     min_pt = pts[np.argmin(exp_noise)]
     return min_pt.x, min_pt.y
 
 if __name__ == "__main__":
+    print(min_exp_noise(0.02, 0.48, 0.5))
     lines = []
     with open('data/normal/N10', 'r') as f:
         lines = f.read().splitlines()
