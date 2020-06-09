@@ -9,6 +9,82 @@ import BaumWelch
 import sys
 from hmmlearn import hmm as skh
 from tqdm import tqdm
+import argparse
+from math import exp
+import math
+from shapely.geometry import LineString, Point
+
+
+def A(q, r, eps):
+    er = exp(eps)*r
+    root = math.sqrt((q - er)**2 + 4*exp(eps)*(1-q)*(1-r))
+    return abs(q - er) * root
+
+
+def B(q, r, eps):
+    return (q-exp(eps)*r)**2 + 2 * exp(eps) * (1-q)*(1-r)
+
+
+def C(q, r, eps):
+    return 2*(1-q)**2 * exp(eps)
+
+
+# Represents A', the result of switching q and r in A
+def A_alt(q, r, eps):
+    return A(r, q, eps)
+
+
+# Represents B', the result of switching q and r in B
+def B_alt(q, r, eps):
+    return B(r, q, eps)
+
+
+# Represents C', the result of switching q and r in B
+def C_alt(q, r, eps):
+    return C(r, q, eps)
+
+
+def min_exp_noise(q, r, eps):
+    e = exp(eps)
+    a = A(q, r, eps)
+    b = B(q, r, eps)
+    c = C(q, r, eps)
+    a_ = A_alt(q, r, eps)
+    b_ = B_alt(q, r, eps)
+    c_ = C_alt(q, r, eps)
+    if (e >= q/r):
+        line1 = LineString([(1-(b+a)/(2*c), 0.5), (0.5, c/(2*(b+a)))])
+    else:  # e < q/r
+        line1 = LineString([(1-(b-a)/(2*c), 0.5), (0.5, c/(2*(b-a)))])
+    if (e >= r/q):
+        line2 = LineString([(c_/(2*(b_+a_)), 0.5), (0.5, 1-(b_+a_)/(2*c_))])
+    else:  # e < r/q
+        line2 = LineString([(c_/(2*(b_-a_)), 0.5), (0.5, 1-(b_-a_)/(2*c_))])
+
+    (x_1, y_1), (x_2, y_2) = line1.coords
+    slope1 = (y_2-y_1)/(x_2 - x_1)
+    (x_1, y_1), (x_2, y_2) = line2.coords
+    slope2 = (y_2-y_1)/(x_2 - x_1)
+    line_top = LineString([(0, 0.5), (0.5, 0.5)])
+    line_right = LineString([(0.5, 0), (0.5, 0.5)])
+    if abs(slope2) > abs(slope1):
+        intsect_top = line2.intersection(line_top)
+        intsect_right = line1.intersection(line_right)
+    else:
+        intsect_top = line1.intersection(line_top)
+        intsect_right = line2.intersection(line_right)
+    intsect = line1.intersection(line2)
+    pts = [intsect, intsect_top, intsect_right]
+    exp_noise = np.zeros((3,))
+    for i, pt in enumerate(pts):
+        if isinstance(pt, Point):
+            exp_noise[i] = pt.x * r/(q+r) + pt.y * q/(q+r)
+        else:
+            exp_noise[i] = float('inf')
+    # return intsect.x, intsect.y
+    print(exp_noise)
+    min_pt = pts[np.argmin(exp_noise)]
+    return min_pt.x, min_pt.y
 
 
 def partitions(number, k):
@@ -83,16 +159,16 @@ class BDPLSTM(nn.Module):
 
     # probs, targets shape: [batch_size, 1]
     def accuracy(self, probs, targets):
-        correct = (probs.round() == targets).sum()
+        correct = (probs.round() == targets.float()).sum()
         return correct.float()/probs.size(0)
 
 
 # training_data = [(N, 4), (N, 1)]
-def LSTMAttacker(trainloader, testloader, num_epochs=15):
+def LSTMAttacker(trainloader, testloader, logfile_name, num_epochs=10):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = BDPLSTM()
     model.to(device)
-    optimizer = optim.Adam(model.parameters(), lr=1e-4)
+    optimizer = optim.Adam(model.parameters(), lr=2e-4)
 
     print('Starting training')
     for epoch in range(num_epochs):
@@ -100,7 +176,8 @@ def LSTMAttacker(trainloader, testloader, num_epochs=15):
         train_seqs = 0.
         train_loss = 0.0
         model.train()
-        for batch_idx, data in enumerate(trainloader):
+        tqdm_train = tqdm(trainloader, ncols=100, mininterval=1, ascii=True)
+        for batch_idx, data in enumerate(tqdm_train):
             x, y = data[0].to(device), data[1].to(device)
             model.zero_grad()
             out = model(x)
@@ -111,7 +188,7 @@ def LSTMAttacker(trainloader, testloader, num_epochs=15):
             train_loss += loss.item()
             train_correct += correct
             train_seqs += len(x)
-            trainloader.set_description_str(
+            tqdm_train.set_description_str(
                 f'[Loss]: {train_loss / (batch_idx + 1):.4f} [Acc]: {train_correct / train_seqs:.4f}')
 
         test_acc = 0.
@@ -126,108 +203,126 @@ def LSTMAttacker(trainloader, testloader, num_epochs=15):
                 correct += (model.accuracy(out, y).item()) * len(out)
             test_acc = correct/total
 
-        print(f"Loss after epoch {epoch} : {train_loss / len(trainloader)}")
-        print(f"Accuracy after epoch {epoch} : {train_correct / train_seqs}")
-        print(f"Test accuracy after epoch {epoch} : {test_acc}")
+        print(
+            f"Loss after epoch {epoch} : {train_loss / len(trainloader)}", file=sys.stderr)
+        print(
+            f"Accuracy after epoch {epoch} : {train_correct / train_seqs}", file=sys.stderr)
+        print(
+            f"Test accuracy after epoch {epoch} : {test_acc}", file=sys.stderr)
 
-        return train_correct / train_seqs, test_acc
+        print(
+            f"Loss after epoch {epoch} : {train_loss / len(trainloader)}", file=logfile_name)
+        print(
+            f"Accuracy after epoch {epoch} : {train_correct / train_seqs}", file=logfile_name)
+        print(
+            f"Test accuracy after epoch {epoch} : {test_acc}", file=logfile_name)
 
-    print('Training done')
+    return train_correct / train_seqs, test_acc
 
 
 num_hidden_states = 1
 num_observations = 1
-seq_len = 30000
+seq_len = 25000
 num_folds = 5
 
 if __name__ == "__main__":
-    eps = 0.5
-    theta = 0.1
-    print('eps:', eps, file=sys.stderr)
-    dp_noise = inference_attack.diff_privacy_noise(eps)
-    print('noise:', dp_noise, file=sys.stderr)
-    print('Probability of not flipping state (lower bound)',
-          1-dp_noise, file=sys.stderr)
-    print(f'Upper bound: {1-theta}')
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--no_for_loop", dest="no_for_loop",
+                        action="store_true")
+    parser.add_argument("--eps", dest="eps", type=float, default=None)
+    parser.add_argument("--output", dest="output_prefix", type=str,
+                        default="synthetic_output")
+    args = parser.parse_args()
 
-    hmm = inference_attack.symmetric_hmm(theta, dp_noise)
-    latents, _ = hmm.generate_data((num_hidden_states, seq_len))
-    size = 20
+    output_prefix = args.output_prefix
+    no_for_loop = args.no_for_loop
+    eps = args.eps
+    no_for_loop = no_for_loop or eps
 
-    # latents_test, _ = hmm.generate_data((num_hidden_states, test_len))
+    if (no_for_loop):
+        supplied_eps = args.eps
+        lst_eps = [supplied_eps]
+        output = f"{output_prefix}_{eps}.csv"
+        output_log = f"{output_prefix}_{eps}.log"
+    else:
+        lst_eps = np.arange(2, 6, 0.5)
+        output = f"{output_prefix}_{eps}.csv"
+        output_log = f"{output_prefix}_{eps}.log"
 
-    inputs = torch.zeros(
-        (num_hidden_states * (seq_len-(size)), size), dtype=torch.long)
-    outputs = torch.zeros(
-        (num_hidden_states * (seq_len-(size)), 1),  dtype=torch.long)
-    # collecting data
-    # test_data_inputs = torch.zeros(
-    #     (num_hidden_states * (test_len-(size)), size), dtype=torch.long)
-    # test_data_outputs = torch.zeros(
-    #     (num_hidden_states * (test_len-(size)), 1),  dtype=torch.long)
-    for idx, latent in enumerate(latents):
+    log_fd = open(output_log, "w+")
+
+    first_time = True
+    for eps in lst_eps:
+        # eps = 2
+        print('eps:', eps, file=sys.stderr)
+        print('eps:', eps, file=log_fd)
+        theta = 0.1
+        rho_0, rho_1 = min_exp_noise(theta, theta, eps)
+        assert(abs(rho_0 - rho_1) < 1e-4)
+        bdp_noise = rho_0
+
+        print('noise:', bdp_noise, file=sys.stderr)
+        print('noise:', bdp_noise, file=log_fd)
+        print('Probability of not flipping state (lower bound)',
+              1-bdp_noise, file=sys.stderr)
+        print('Probability of not flipping state (lower bound)',
+              1-bdp_noise, file=log_fd)
+        print(f'Upper bound: {1-theta}', file=sys.stderr)
+        print(f'Upper bound: {1-theta}', file=log_fd)
+
+        hmm = inference_attack.symmetric_hmm(theta, bdp_noise)
+        latents, _ = hmm.generate_data((num_hidden_states, seq_len))
+        size = 120
+
+        inputs = torch.zeros(
+            (num_hidden_states * (seq_len-(size)), size), dtype=torch.long)
+        outputs = torch.zeros(
+            (num_hidden_states * (seq_len-(size)), 1),  dtype=torch.long)
+
+        latent = np.load('n10.npy').astype(np.int_)
+        # latent = latents[0]
         sanitized = inference_attack.emissions(latent, hmm.b)
 
-        # FOR TESTING PURPOSES ONLY
-        # np.save("latent", latent)
-        # np.save("sanitized", sanitized)
-        # latent = np.load("latent.npy")
-        # sanitized = np.load("sanitized.npy")
-
-        # _, predictions = hmm.viterbi(sanitized[size//2:-size//2])
-        # count = np.sum(predictions == latent[size//2:-size//2])
-        # print(f'Viterbi Accuracy (knows parameters): {count/seq_len}')
-
-        # More accurate, but underflows (should just implement separate algo which maximizes only the transition probabilities)
-        # rho = dp_noise
-        # theta_hats = []
-        # for i in range(seq_len//750):
-        #     a = np.ones((2, 2))
-        #     a = a / np.sum(a, axis=1)
-        #     emissions = np.array([[1-rho, rho], [rho, 1-rho]])
-        #     pi = np.array((0.5, 0.5))
-        #     a, b = BaumWelch.baum_welch(
-        #         sanitized[i*750:(i+1)*750], a, emissions, pi, n_iter=100)
-        #     print(f'a:{a} \nb:{b}')
-        #     theta_hats.append((a[0, 1] + a[1, 0])/2)
-        # theta_hat = np.average(theta_hats)
-        # p_hat = np.array([[1-theta_hat, theta_hat], [theta_hat, 1-theta_hat]])
-        # print(f'P_hat = {p_hat}')
-
-        # custom_model: hmms.DtHMM = hmms.DtHMM(p_hat, emissions, pi)
-        # _, predictions = custom_model.viterbi(sanitized[size//2:-size//2])
-        # count = np.sum(predictions == latent[size//2:-size//2])
-        # print(
-        #     f'Viterbi Accuracy (learns parameters with custom BW): {count/seq_len}')
+        _, predictions = hmm.viterbi(sanitized[size//2:-size//2])
+        count = np.sum(predictions == latent[size//2:-size//2])
+        print(
+            f'Viterbi Accuracy (knows parameters): {count/predictions.shape[0]}', file=sys.stderr)
+        print(
+            f'Viterbi Accuracy (knows parameters): {count/predictions.shape[0]}', file=log_fd)
+        print(f'SB Attacker: {np.sum(latent==sanitized)/len(latent)}')
+        viterbi_accuracy = count/predictions.shape[0]
 
         for inner_idx in range(seq_len-size-2):
-            inputs[idx*(seq_len-(size)) + inner_idx] = torch.tensor(
+            inputs[inner_idx] = torch.tensor(
                 sanitized[inner_idx:inner_idx+size])
-            outputs[idx*(seq_len-(size)) +
-                    inner_idx] = torch.tensor(latent[inner_idx+size//2])
+            outputs[inner_idx] = torch.tensor(latent[inner_idx+size//2])
 
-    # for idx, latent in enumerate(latents_test):
-    #     sanitized = inference_attack.emissions(latent, hmm.b)
-    #     for inner_idx in range(test_len-size-2):
-    #         test_data_inputs[idx*(test_len-(size)) + inner_idx] = torch.tensor(
-    #             sanitized[inner_idx:inner_idx+size])
-    #         test_data_outputs[idx*(test_len-(size)) +
-    #                           inner_idx] = torch.tensor(latent[inner_idx+size//2])
+        data = list(zip(inputs, outputs))
+        print(len(data))
 
-    data = list(zip(inputs, outputs))
-    print(len(data))
-    # training_data = list(zip(inputs, outputs))
-    # test_data = list(zip(test_data_inputs, test_data_outputs))
+        num_folds = 5
+        lstm_avg_acc = 0.
+        for train_idx, test_idx in k_folds(num_folds, len(data)):
+            print(len(train_idx), len(test_idx))
+            training_data = torch.utils.data.Subset(data, indices=train_idx)
+            test_data = torch.utils.data.Subset(data, indices=test_idx)
 
-    for train_idx, test_idx in k_folds(5, len(data)):
-        print(len(train_idx), len(test_idx))
-        training_data = torch.utils.data.Subset(data, indices=train_idx)
-        test_data = torch.utils.data.Subset(data, indices=test_idx)
+            trainloader = torch.utils.data.DataLoader(
+                training_data, batch_size=6, shuffle=True, pin_memory=True)
+            testloader = torch.utils.data.DataLoader(
+                test_data, batch_size=6, shuffle=False, pin_memory=True)
+            train_acc, test_acc = LSTMAttacker(trainloader, testloader, log_fd)
+            lstm_avg_acc += test_acc
+            print(
+                f"Train accuracy: {train_acc}, test accuracy: {test_acc}", file=sys.stderr)
+            print(
+                f"Train accuracy: {train_acc}, test accuracy: {test_acc}", file=log_fd)
 
-        trainloader = torch.utils.data.DataLoader(
-            training_data, batch_size=6, shuffle=True, pin_memory=True)
-        testloader = torch.utils.data.DataLoader(
-            test_data, batch_size=6, shuffle=False, pin_memory=True)
-        train_acc, test_acc = LSTMAttacker(
-            tqdm(trainloader, ncols=100), tqdm(testloader, ncols=100))
-        print(f"Train accuracy: {train_acc}, test accuracy: {test_acc}")
+        lstm_avg_acc /= num_folds
+        with open(output, "a+") as f:
+            if (first_time):
+                f.write(f"eps, viterbi_accuracy, lstm_accuracy\n")
+                first_time = False
+            f.write(f"{eps}, {viterbi_accuracy}, {lstm_avg_acc}\n")
+
+    log_fd.close()

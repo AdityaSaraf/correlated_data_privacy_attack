@@ -8,14 +8,19 @@ import inference_attack
 import lstm_attack
 import hmms
 import BaumWelch
+import argparse
+import sys
+
 
 def A(q, r, eps):
     er = exp(eps)*r
     root = math.sqrt((q - er)**2 + 4*exp(eps)*(1-q)*(1-r))
     return abs(q - er) * root
 
+
 def B(q, r, eps):
     return (q-exp(eps)*r)**2 + 2 * exp(eps) * (1-q)*(1-r)
+
 
 def C(q, r, eps):
     return 2*(1-q)**2 * exp(eps)
@@ -43,14 +48,14 @@ def min_exp_noise(q, r, eps):
     b_ = B_alt(q, r, eps)
     c_ = C_alt(q, r, eps)
     if (e >= q/r):
-        line1 = LineString([ (1-(b+a)/(2*c), 0.5), (0.5, c/(2*(b+a))) ])
-    else: # e < q/r
-        line1 = LineString([ (1-(b-a)/(2*c), 0.5), (0.5, c/(2*(b-a))) ])
+        line1 = LineString([(1-(b+a)/(2*c), 0.5), (0.5, c/(2*(b+a)))])
+    else:  # e < q/r
+        line1 = LineString([(1-(b-a)/(2*c), 0.5), (0.5, c/(2*(b-a)))])
     if (e >= r/q):
-        line2 = LineString([ (c_/(2*(b_+a_)),0.5), (0.5,1-(b_+a_)/(2*c_)) ])
-    else: # e < r/q
-        line2 = LineString([ (c_/(2*(b_-a_)),0.5), (0.5,1-(b_-a_)/(2*c_)) ])
-    
+        line2 = LineString([(c_/(2*(b_+a_)), 0.5), (0.5, 1-(b_+a_)/(2*c_))])
+    else:  # e < r/q
+        line2 = LineString([(c_/(2*(b_-a_)), 0.5), (0.5, 1-(b_-a_)/(2*c_))])
+
     (x_1, y_1), (x_2, y_2) = line1.coords
     slope1 = (y_2-y_1)/(x_2 - x_1)
     (x_1, y_1), (x_2, y_2) = line2.coords
@@ -76,8 +81,31 @@ def min_exp_noise(q, r, eps):
     min_pt = pts[np.argmin(exp_noise)]
     return min_pt.x, min_pt.y
 
+
 if __name__ == "__main__":
-    print(min_exp_noise(0.02, 0.48, 0.5))
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--no_for_loop", dest="no_for_loop",
+                        action="store_true")
+    parser.add_argument("--eps", dest="eps", type=float, default=0.2)
+    parser.add_argument("--output", dest="output_prefix", type=str,
+                        default="real_data_output")
+    args = parser.parse_args()
+
+    output_prefix = args.output_prefix
+    no_for_loop = args.no_for_loop
+
+    if no_for_loop:
+        supplied_eps = args.eps
+        lst_eps = [supplied_eps]
+        output = f"{output_prefix}_{eps}.csv"
+        output_log = f"{output_prefix}_{eps}.log"
+    else:
+        lst_eps = np.arange(1, 5.5, 0.5)
+        output = f"{output_prefix}.csv"
+        output_log = f"{output_prefix}.log"
+
+    log_fd = open(output_log, "w+")
+
     lines = []
     with open('data/normal/N10', 'r') as f:
         lines = f.read().splitlines()
@@ -86,109 +114,97 @@ if __name__ == "__main__":
     print(len(data))
     # data = data[0:len(data):2]
     avg = np.average(data)
-    binary_dat = np.array([item >= avg for item in data]) # state 0 (aka False) indicates rest state
-    transition_counts = {(True, True): 0, (True, False): 0, (False, True): 0, (False, False): 0}
+    # state 0 (aka False) indicates rest state
+    binary_dat = np.array([item >= avg for item in data])
+    transition_counts = {(True, True): 0, (True, False): 0,
+                         (False, True): 0, (False, False): 0}
 
     for i in range(len(binary_dat) - 1):
         from_state = binary_dat[i]
         to_state = binary_dat[i+1]
         transition_counts[(from_state, to_state)] += 1
 
-    q = transition_counts[(False, True)]/(transition_counts[(False, True)] + transition_counts[(False, False)])
-    r = transition_counts[(True, False)]/(transition_counts[(True, False)] + transition_counts[(True, True)])
-    print('(q, r):', (q,r))
-    print('Original sum: ', np.sum(binary_dat))
-    # q, r = 0.02, 0.02
-    eps = 2.0
-    rho_0, rho_1 = min_exp_noise(q, r, eps)
-    # print(min_exp_noise(0.35, 0.4, 0.5))
-    print('eps:', eps, '(rho_0, rho_1):', (rho_0, rho_1))
-    data = np.array(binary_dat, dtype=bool)
-    for i, val in enumerate(data):
-        if val: # 1 state
-            if np.random.rand() < rho_1:
-                data[i] = not val
-        else: # 0 state
-            if np.random.rand() < rho_0:
-                data[i] = not val
-    print('sum: ', np.sum(data))
-    print(f"changed in {np.sum(data == binary_dat)} locations")
-
-    size = 120
-    seq_len = int((data.size-size)* 0.8)
-    test_len = (data.size-size) - seq_len
-
-    all_data_inputs = torch.zeros((data.size-(size), size), dtype=torch.long)
-    all_data_outputs = torch.zeros((data.size- (size), 1), dtype = torch.long) 
-
-    training_data_inputs = torch.zeros(((seq_len-(size)), size), dtype=torch.long)
-    training_data_outputs = torch.zeros(((seq_len-(size)), 1),  dtype=torch.long)
-    # collecting data
-    test_data_inputs = torch.zeros((test_len-(size), size), dtype=torch.long)
-    test_data_outputs = torch.zeros((test_len-(size), 1),  dtype=torch.long)
+    q = transition_counts[(
+        False, True)]/(transition_counts[(False, True)] + transition_counts[(False, False)])
+    r = transition_counts[(
+        True, False)]/(transition_counts[(True, False)] + transition_counts[(True, True)])
+    print('(q, r):', (q, r), file=sys.stderr)
+    print('(q, r):', (q, r), file=log_fd)
     
-    latent = binary_dat.astype(np.int_)
-    sanitized = data.astype(np.int_)
+    with open(output, "a+") as f:
+        f.write(f"eps, viterbi_accuracy, lstm_accuracy\n")
+    for eps in lst_eps:
+        rho_0, rho_1 = min_exp_noise(q, r, eps)
+        print('eps:', eps, '(rho_0, rho_1):', (rho_0, rho_1), file=log_fd)
+        print('eps:', eps, '(rho_0, rho_1):', (rho_0, rho_1), file=sys.stderr)
+        data = np.array(binary_dat, dtype=bool)
+        for i, val in enumerate(data):
+            if val:  # 1 state
+                if np.random.rand() < rho_1:
+                    data[i] = not val
+            else:  # 0 state
+                if np.random.rand() < rho_0:
+                    data[i] = not val
 
-    print(f'Correlation ignorant attacker success prob:{np.sum(latent == sanitized)/latent.shape[0]}')
+        size = 100
+        all_data_inputs = torch.zeros(
+            (data.size-(size), size), dtype=torch.long)
+        all_data_outputs = torch.zeros(
+            (data.size - (size), 1), dtype=torch.long)
 
-    p = np.array([[1-q, q], [r, 1-r]])
-    pi = np.array((0.5, 0.5))
-    emissions = np.array([[1-rho_0,rho_0],[rho_1,1-rho_1]])
-    
-    custom_model_knows_params = hmms.DtHMM(p, emissions, pi)
+        latent = binary_dat.astype(np.int_)
+        sanitized = data.astype(np.int_)
 
-    _, predictions = custom_model_knows_params.viterbi(sanitized)
+        print(
+            f'SB acc:{np.sum(latent == sanitized)/latent.shape[0]}', file=sys.stderr)
+        print(
+            f'SB acc:{np.sum(latent == sanitized)/latent.shape[0]}', file=log_fd)
 
-    viterbi_test_start = (data.size//2) - 10000
-    viterbi_test_end = (data.size//2) + 10000
-    count = np.sum(predictions[viterbi_test_start:viterbi_test_end] == latent[viterbi_test_start:viterbi_test_end])
-    print(f'Viterbi Accuracy (knows parameters): {count/(viterbi_test_end - viterbi_test_start)}')
-    count = np.sum(predictions == latent)
-    print(f'Viterbi Overall Accuracy (knows parameters): {count/(predictions.shape[0])}')
-        
-    # transition_01 = []
-    # transition_10 = []
+        p = np.array([[1-q, q], [r, 1-r]])
+        pi = np.array((0.5, 0.5))
+        emissions = np.array([[1-rho_0, rho_0], [rho_1, 1-rho_1]])
 
-    # for i in range(data.size//300):
-    #     a = np.ones((2, 2))
-    #     a = a / np.sum(a, axis=1)
-    #     pi = np.array((0.5, 0.5))
-    #     emissions = np.array([[1-rho_0,rho_0],[rho_1,1-rho_1]])
-    #     a, b = BaumWelch.baum_welch(sanitized[i*300:(i+1)*300], a, emissions, pi, n_iter=1000)
-    #     print(f'a:{a} \nb:{b}')
-    #     transition_01.append(a[0,1])
-    #     transition_10.append(a[1,0])
-    
-    # q_hat = np.average(transition_01)
-    # r_hat = np.average(transition_10)
+        hmm_model = hmms.DtHMM(p, emissions, pi)
 
-    # p_hat = np.array([[1-q_hat, q_hat], [r_hat, 1-r_hat]])
-    # print(f'P_hat = {p_hat}')
+        _, predictions = hmm_model.viterbi(sanitized)
+        count = np.sum(predictions == latent)
+        viterbi_accuracy = count/predictions.shape[0]
+        print(
+            f'Viterbi Acc: {viterbi_accuracy}', file=sys.stderr)
+        print(
+            f'Viterbi Acc: {viterbi_accuracy}', file=log_fd)
 
-    # custom_model: hmms.DtHMM = hmms.DtHMM(p_hat, emissions, pi)
-    # _, predictions = custom_model.viterbi(sanitized)
-    # count = np.sum(predictions[seq_len+size//2:-size//2] == latent[seq_len+size//2:-size//2])
-    # print(f'Viterbi Accuracy (learns parameters with custom BW): {count/(test_len - size)}')
+        for inner_idx in range(data.size-size):
+            all_data_inputs[inner_idx] = torch.tensor(
+                sanitized[inner_idx:inner_idx+size])
+            all_data_outputs[inner_idx] = torch.tensor(
+                latent[inner_idx+size//2])
 
-    for inner_idx in range(data.size-size):
-        all_data_inputs[inner_idx] = torch.tensor(sanitized[inner_idx:inner_idx+size])
-        all_data_outputs[inner_idx] = torch.tensor(latent[inner_idx+size//2])
+        all_data = list(zip(all_data_inputs, all_data_outputs))
+        num_folds = 5
+        lstm_avg_acc = 0.
+        fold_idx = 0
+        for train_idx, test_idx in lstm_attack.k_folds(num_folds, len(all_data)):
+            print(f'fold: {fold_idx}', file=sys.stderr)
+            print(f'fold: {fold_idx}', file=log_fd)
+            fold_idx += 1
+            training_data = torch.utils.data.Subset(
+                all_data, indices=train_idx)
+            test_data = torch.utils.data.Subset(all_data, indices=test_idx)
 
-    train_dataset, test_dataset = torch.utils.data.random_split(list(zip(all_data_inputs, all_data_outputs)), [seq_len, test_len])
-    
-    # for inner_idx in range(seq_len-size):
-    #     training_data_inputs[inner_idx] = torch.tensor(sanitized[inner_idx:inner_idx+size])
-    #     training_data_outputs[inner_idx] = torch.tensor(latent[inner_idx+size//2])
-    
-    # for inner_idx in range(test_len-size):
-    #     test_data_inputs[inner_idx] = torch.tensor(sanitized[inner_idx:inner_idx+size])
-    #     test_data_outputs[inner_idx] = torch.tensor(latent[inner_idx+size//2])
+            trainloader = torch.utils.data.DataLoader(
+                training_data, batch_size=6, shuffle=True, pin_memory=True)
+            testloader = torch.utils.data.DataLoader(
+                test_data, batch_size=6, shuffle=False, pin_memory=True)
+            train_acc, test_acc = lstm_attack.LSTMAttacker(
+                trainloader, testloader, log_fd)
+            lstm_avg_acc += test_acc
+            print(
+                f"Train accuracy: {train_acc}, test accuracy: {test_acc}", file=sys.stderr)
+            print(
+                f"Train accuracy: {train_acc}, test accuracy: {test_acc}", file=log_fd)
+        lstm_avg_acc /= num_folds
+        with open(output, "a+") as f:
+            f.write(f"{eps}, {viterbi_accuracy}, {lstm_avg_acc}\n")
 
-    # training_data = list(zip(training_data_inputs, training_data_outputs))
-    # test_data = list(zip(test_data_inputs, test_data_outputs))
-    trainloader = torch.utils.data.DataLoader(train_dataset, batch_size=16, shuffle=True, num_workers=4)
-    testloader = torch.utils.data.DataLoader(test_dataset, batch_size=16, shuffle=False, num_workers=4)
-    train_acc, test_acc = lstm_attack.LSTMAttacker(trainloader, testloader)
-    print(f"Train accuracy: {train_acc}, test accuracy: {test_acc}")
-    print(transition_counts)
+    log_fd.close()
