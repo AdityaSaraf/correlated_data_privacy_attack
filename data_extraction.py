@@ -106,7 +106,7 @@ if __name__ == "__main__":
     log_fd = open(output_log, "w+")
 
     lines = []
-    with open('data/normal/N10', 'r') as f:
+    with open('data/normal/N8', 'r') as f:
         lines = f.read().splitlines()
         lines = [item.split(' ')[1] for item in lines]
     data = np.array(lines, dtype=float)

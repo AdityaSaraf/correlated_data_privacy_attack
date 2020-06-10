@@ -272,7 +272,7 @@ if __name__ == "__main__":
         latent, sanitized = hmm.generate_data((num_hidden_states, seq_len))
         latent = latent[0]
         sanitized = sanitized[0]
-        size = 120
+        size = 100
 
         inputs = torch.zeros(
             (num_hidden_states * (seq_len-(size)), size), dtype=torch.long)
