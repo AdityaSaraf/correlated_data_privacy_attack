@@ -1,0 +1,48 @@
+eps: 0.5
+noise: 0.49742235755151176
+Probability of not flipping state (lower bound) 0.5025776424484882
+Upper bound: 0.98
+Viterbi Accuracy (knows parameters): 0.5026333333333334
+Loss after epoch 0 : 0.697981621235609
+Accuracy after epoch 0 : 0.4926859871239234
+Test accuracy after epoch 0 : 0.4995832748016848
+Loss after epoch 1 : 0.6931725769937038
+Accuracy after epoch 1 : 0.5034382273701733
+Test accuracy after epoch 1 : 0.49758294135317205
+Loss after epoch 2 : 0.6930825199782849
+Accuracy after epoch 2 : 0.5046468128820687
+Test accuracy after epoch 2 : 0.49758294135317205
+Loss after epoch 3 : 0.6930490088313818
+Accuracy after epoch 3 : 0.5090227245315707
+Test accuracy after epoch 3 : 0.48891482913190076
+Loss after epoch 4 : 0.6930362936705351
+Accuracy after epoch 4 : 0.5067722556752
+Test accuracy after epoch 4 : 0.48124688287479994
+Loss after epoch 5 : 0.6929922322183848
+Accuracy after epoch 5 : 0.5082725684042647
+Test accuracy after epoch 5 : 0.4785797648438614
+Loss after epoch 6 : 0.6930161079317332
+Accuracy after epoch 6 : 0.5066889050057044
+Test accuracy after epoch 6 : 0.4785797648438614
+Loss after epoch 7 : 0.6930081152617932
+Accuracy after epoch 7 : 0.5063138267936297
+Test accuracy after epoch 7 : 0.4785797648438614
+Loss after epoch 8 : 0.693015904724598
+Accuracy after epoch 8 : 0.5091894259922801
+Test accuracy after epoch 8 : 0.4785797648438614
+Loss after epoch 9 : 0.6930052698105573
+Accuracy after epoch 9 : 0.5071056583780228
+Test accuracy after epoch 9 : 0.4792465435095401
+Train accuracy: 0.5071056583780228, test accuracy: 0.4792465435095401
+Loss after epoch 0 : 0.6976027753800154
+Accuracy after epoch 0 : 0.49897896509588846
+Test accuracy after epoch 0 : 0.49074845935309164
+Loss after epoch 1 : 0.6935830210298299
+Accuracy after epoch 1 : 0.49818713321837815
+Test accuracy after epoch 1 : 0.4997499713074626
+Loss after epoch 2 : 0.6933348663151264
+Accuracy after epoch 2 : 0.4968951974667269
+Test accuracy after epoch 2 : 0.5019169993317312
+Loss after epoch 3 : 0.6932917871922255
+Accuracy after epoch 3 : 0.4985205361124723
+Test accuracy after epoch 3 : 0.5004167467564379

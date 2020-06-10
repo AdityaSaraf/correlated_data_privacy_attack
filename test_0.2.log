@@ -1,0 +1,23 @@
+eps: 2
+noise: 0.35905696276880567
+Probability of not flipping state (lower bound) 0.6409430372311944
+Upper bound: 0.8
+Viterbi Accuracy (knows parameters): 0.6318666666666667
+Loss after epoch 0 : 0.6961558474308852
+Accuracy after epoch 0 : 0.5104236272141944
+Test accuracy after epoch 0 : 0.4993328980510039
+Loss after epoch 1 : 0.6933926160243704
+Accuracy after epoch 1 : 0.5104236273136017
+Test accuracy after epoch 1 : 0.4993328980510039
+Loss after epoch 2 : 0.693121726689427
+Accuracy after epoch 2 : 0.5104236273011759
+Test accuracy after epoch 2 : 0.4993328980510039
+Loss after epoch 3 : 0.6929370648506703
+Accuracy after epoch 3 : 0.5104236275086886
+Test accuracy after epoch 3 : 0.4993328980510039
+Loss after epoch 4 : 0.6888511174317895
+Accuracy after epoch 4 : 0.5308539147070641
+Test accuracy after epoch 4 : 0.5907271633184378
+Loss after epoch 5 : 0.6769374493600846
+Accuracy after epoch 5 : 0.5948549177425555
+Test accuracy after epoch 5 : 0.6012341677049067

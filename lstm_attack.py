@@ -245,32 +245,31 @@ if __name__ == "__main__":
         output = f"{output_prefix}_{eps}.csv"
         output_log = f"{output_prefix}_{eps}.log"
     else:
-        lst_eps = np.arange(2, 6, 0.5)
+        lst_eps = np.arange(1, 5, 0.5)
         output = f"{output_prefix}_{eps}.csv"
         output_log = f"{output_prefix}_{eps}.log"
 
     log_fd = open(output_log, "w+")
 
-    first_time = True
+    with open(output, "a+") as f:
+        f.write(f"eps, viterbi_accuracy, lstm_accuracy\n")
+    
+    q, r = 0.08937981353871098, 0.10924092409240924
+    transitions = np.array([[1-q,q],
+                            [r,1-r]])
+    pi = [0.5, 0.5]
     for eps in lst_eps:
         # eps = 2
         print('eps:', eps, file=sys.stderr)
         print('eps:', eps, file=log_fd)
-        theta = 0.1
-        rho_0, rho_1 = min_exp_noise(theta, theta, eps)
-        assert(abs(rho_0 - rho_1) < 1e-4)
-        bdp_noise = rho_0
+        rho_0, rho_1 = min_exp_noise(q, r, eps)
+        emissions = np.array([[1-rho_0,rho_0],
+                             [rho_1,1-rho_1]])
+        print('rho_0, rho_1:', rho_0, rho_1, file=sys.stderr)
+        print('rho_0, rho_1:', rho_0, rho_1, file=log_fd)
 
-        print('noise:', bdp_noise, file=sys.stderr)
-        print('noise:', bdp_noise, file=log_fd)
-        print('Probability of not flipping state (lower bound)',
-              1-bdp_noise, file=sys.stderr)
-        print('Probability of not flipping state (lower bound)',
-              1-bdp_noise, file=log_fd)
-        print(f'Upper bound: {1-theta}', file=sys.stderr)
-        print(f'Upper bound: {1-theta}', file=log_fd)
-
-        hmm = inference_attack.symmetric_hmm(theta, bdp_noise)
+        hmm = hmms.DtHMM(transitions, emissions, pi)
+        # hmm = inference_attack.symmetric_hmm(theta, bdp_noise)
         latents, _ = hmm.generate_data((num_hidden_states, seq_len))
         size = 120
 
@@ -279,19 +278,24 @@ if __name__ == "__main__":
         outputs = torch.zeros(
             (num_hidden_states * (seq_len-(size)), 1),  dtype=torch.long)
 
-        latent = np.load('n10.npy').astype(np.int_)
-        # latent = latents[0]
+        # latent = np.load('n10.npy').astype(np.int_)
+        latent = latents[0]
         sanitized = inference_attack.emissions(latent, hmm.b)
+        print(
+            f'SB acc:{np.sum(latent == sanitized)/latent.shape[0]}', file=sys.stderr)
+        print(
+            f'SB acc:{np.sum(latent == sanitized)/latent.shape[0]}', file=log_fd)
 
         _, predictions = hmm.viterbi(sanitized[size//2:-size//2])
         count = np.sum(predictions == latent[size//2:-size//2])
-        print(
-            f'Viterbi Accuracy (knows parameters): {count/predictions.shape[0]}', file=sys.stderr)
-        print(
-            f'Viterbi Accuracy (knows parameters): {count/predictions.shape[0]}', file=log_fd)
-        print(f'SB Attacker: {np.sum(latent==sanitized)/len(latent)}')
         viterbi_accuracy = count/predictions.shape[0]
+        print(
+            f'Viterbi Accuracy (knows parameters): {viterbi_accuracy}', file=sys.stderr)
+        print(
+            f'Viterbi Accuracy (knows parameters): {viterbi_accuracy}', file=log_fd)
+        print(f'SB Attacker: {np.sum(latent==sanitized)/len(latent)}')
 
+        continue
         for inner_idx in range(seq_len-size-2):
             inputs[inner_idx] = torch.tensor(
                 sanitized[inner_idx:inner_idx+size])
@@ -320,9 +324,6 @@ if __name__ == "__main__":
 
         lstm_avg_acc /= num_folds
         with open(output, "a+") as f:
-            if (first_time):
-                f.write(f"eps, viterbi_accuracy, lstm_accuracy\n")
-                first_time = False
             f.write(f"{eps}, {viterbi_accuracy}, {lstm_avg_acc}\n")
 
     log_fd.close()

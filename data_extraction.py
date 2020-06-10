@@ -81,7 +81,6 @@ def min_exp_noise(q, r, eps):
     min_pt = pts[np.argmin(exp_noise)]
     return min_pt.x, min_pt.y
 
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--no_for_loop", dest="no_for_loop",
