@@ -1,85 +1,24 @@
-eps: 2
-noise: 0.4352606342071349
-Probability of not flipping state (lower bound) 0.5647393657928651
-Upper bound: 0.9
-Viterbi Accuracy (knows parameters): 0.5568327974276527
-Loss after epoch 0 : 0.6952990904100118
-Accuracy after epoch 0 : 0.5002512167480406
-Test accuracy after epoch 0 : 0.5080385959356831
-Loss after epoch 1 : 0.6931755045690473
-Accuracy after epoch 1 : 0.501708210324659
-Test accuracy after epoch 1 : 0.5110530653171889
-Loss after epoch 2 : 0.6931045340119247
-Accuracy after epoch 2 : 0.5072849790934006
-Test accuracy after epoch 2 : 0.5110530668624057
-Loss after epoch 3 : 0.6929965250962035
-Accuracy after epoch 3 : 0.5096965548267941
-Test accuracy after epoch 3 : 0.502411587445299
-Loss after epoch 4 : 0.6930565106861558
-Accuracy after epoch 4 : 0.5024115868912968
-Test accuracy after epoch 4 : 0.5064308802833799
-Loss after epoch 5 : 0.6930488178786058
-Accuracy after epoch 5 : 0.5081390790368798
-Test accuracy after epoch 5 : 0.5124598175371096
-Loss after epoch 6 : 0.6930025039917738
-Accuracy after epoch 6 : 0.5046221979750003
-Test accuracy after epoch 6 : 0.5048231634452125
-Loss after epoch 7 : 0.6929423593842459
-Accuracy after epoch 7 : 0.5116057188229162
-Test accuracy after epoch 7 : 0.5108520996747867
-Loss after epoch 8 : 0.6929458321901313
-Accuracy after epoch 8 : 0.504119786061047
-Test accuracy after epoch 8 : 0.5100482420283116
-Loss after epoch 9 : 0.6930701070301787
-Accuracy after epoch 9 : 0.5069835323037826
-Test accuracy after epoch 9 : 0.5146704300806837
-Train accuracy: 0.5069835323037826, test accuracy: 0.5146704300806837
-Loss after epoch 0 : 0.6965782398862103
-Accuracy after epoch 0 : 0.5042705097942466
-Test accuracy after epoch 0 : 0.4881430926801595
-Loss after epoch 1 : 0.6931269101488655
-Accuracy after epoch 1 : 0.5010550754680823
-Test accuracy after epoch 1 : 0.4881430926801595
-Loss after epoch 2 : 0.6930769112650496
-Accuracy after epoch 2 : 0.5060791914527967
-Test accuracy after epoch 2 : 0.4995980817297551
-Loss after epoch 3 : 0.6929856507335534
-Accuracy after epoch 3 : 0.5047729215045667
-Test accuracy after epoch 3 : 0.4995980817297551
-Loss after epoch 4 : 0.6930330666057168
-Accuracy after epoch 4 : 0.5074859439676861
-Test accuracy after epoch 4 : 0.4995980817297551
-Loss after epoch 5 : 0.6930390137229215
-Accuracy after epoch 5 : 0.5069332908362845
-Test accuracy after epoch 5 : 0.4995980817297551
-Loss after epoch 6 : 0.6930367209560688
-Accuracy after epoch 6 : 0.5070337734119278
-Test accuracy after epoch 6 : 0.5044212341069025
-Loss after epoch 7 : 0.692977319071277
-Accuracy after epoch 7 : 0.5108018603903568
-Test accuracy after epoch 7 : 0.4995980817297551
-Loss after epoch 8 : 0.6930143605196886
-Accuracy after epoch 8 : 0.509947760987404
-Test accuracy after epoch 8 : 0.4963826463944084
-Loss after epoch 9 : 0.6930084895699623
-Accuracy after epoch 9 : 0.508541008168562
-Test accuracy after epoch 9 : 0.4995980817297551
-Train accuracy: 0.508541008168562, test accuracy: 0.4995980817297551
-Loss after epoch 0 : 0.6934074315592207
-Accuracy after epoch 0 : 0.505074368360066
-Test accuracy after epoch 0 : 0.505024127045293
-Loss after epoch 1 : 0.6931388017245989
-Accuracy after epoch 1 : 0.5046724389304206
-Test accuracy after epoch 1 : 0.5090434191766467
-Loss after epoch 2 : 0.6931056202068754
-Accuracy after epoch 2 : 0.5024115867520476
-Test accuracy after epoch 2 : 0.4865353768362014
-Loss after epoch 3 : 0.6931359391567432
-Accuracy after epoch 3 : 0.49783964100865785
-Test accuracy after epoch 3 : 0.5152733246361615
-Loss after epoch 4 : 0.6930931275906945
-Accuracy after epoch 4 : 0.5019594164059117
-Test accuracy after epoch 4 : 0.5186897232002575
-Loss after epoch 5 : 0.6930827863644663
-Accuracy after epoch 5 : 0.5025623100794779
-Test accuracy after epoch 5 : 0.5184887594803929
+eps: 1.0
+Viterbi Accuracy (knows parameters): 0.5627813504823151
+eps: 1.5
+Viterbi Accuracy (knows parameters): 0.557315112540193
+eps: 2.0
+Viterbi Accuracy (knows parameters): 0.5647909967845659
+eps: 2.5
+Viterbi Accuracy (knows parameters): 0.61241961414791
+eps: 3.0
+rho_0, rho_1: 0.41566849347818463 0.3566659598008767
+SB acc:0.6084
+Viterbi Accuracy (knows parameters): 0.6395900321543408
+eps: 3.5
+rho_0, rho_1: 0.38507017414810385 0.32224570964803295
+SB acc:0.64516
+Viterbi Accuracy (knows parameters): 0.6870578778135048
+eps: 4.0
+rho_0, rho_1: 0.3472810179742222 0.2833828163430854
+SB acc:0.68456
+Viterbi Accuracy (knows parameters): 0.7565112540192926
+eps: 4.5
+rho_0, rho_1: 0.3025112154806662 0.2406595816438959
+SB acc:0.72348
+Viterbi Accuracy (knows parameters): 0.8004823151125402

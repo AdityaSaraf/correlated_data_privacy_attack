@@ -223,7 +223,7 @@ def LSTMAttacker(trainloader, testloader, logfile_name, num_epochs=10):
 num_hidden_states = 1
 num_observations = 1
 seq_len = 25000
-num_folds = 5
+num_folds = 10
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -245,9 +245,9 @@ if __name__ == "__main__":
         output = f"{output_prefix}_{eps}.csv"
         output_log = f"{output_prefix}_{eps}.log"
     else:
-        lst_eps = np.arange(1, 5, 0.5)
-        output = f"{output_prefix}_{eps}.csv"
-        output_log = f"{output_prefix}_{eps}.log"
+        lst_eps = np.arange(1, 5.5, 0.5)
+        output = f"{output_prefix}.csv"
+        output_log = f"{output_prefix}.log"
 
     log_fd = open(output_log, "w+")
 
@@ -269,8 +269,9 @@ if __name__ == "__main__":
         print('rho_0, rho_1:', rho_0, rho_1, file=log_fd)
 
         hmm = hmms.DtHMM(transitions, emissions, pi)
-        # hmm = inference_attack.symmetric_hmm(theta, bdp_noise)
-        latents, _ = hmm.generate_data((num_hidden_states, seq_len))
+        latent, sanitized = hmm.generate_data((num_hidden_states, seq_len))
+        latent = latent[0]
+        sanitized = sanitized[0]
         size = 120
 
         inputs = torch.zeros(
@@ -278,9 +279,8 @@ if __name__ == "__main__":
         outputs = torch.zeros(
             (num_hidden_states * (seq_len-(size)), 1),  dtype=torch.long)
 
-        # latent = np.load('n10.npy').astype(np.int_)
-        latent = latents[0]
-        sanitized = inference_attack.emissions(latent, hmm.b)
+        # latent = latents[0]
+        # sanitized = inference_attack.emissions(latent, hmm.b)
         print(
             f'SB acc:{np.sum(latent == sanitized)/latent.shape[0]}', file=sys.stderr)
         print(
@@ -295,7 +295,7 @@ if __name__ == "__main__":
             f'Viterbi Accuracy (knows parameters): {viterbi_accuracy}', file=log_fd)
         print(f'SB Attacker: {np.sum(latent==sanitized)/len(latent)}')
 
-        continue
+        
         for inner_idx in range(seq_len-size-2):
             inputs[inner_idx] = torch.tensor(
                 sanitized[inner_idx:inner_idx+size])
@@ -323,6 +323,7 @@ if __name__ == "__main__":
                 f"Train accuracy: {train_acc}, test accuracy: {test_acc}", file=log_fd)
 
         lstm_avg_acc /= num_folds
+        lstm_avg_acc = 0
         with open(output, "a+") as f:
             f.write(f"{eps}, {viterbi_accuracy}, {lstm_avg_acc}\n")
 
