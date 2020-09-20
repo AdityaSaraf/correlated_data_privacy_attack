@@ -7,7 +7,6 @@ import torch
 import inference_attack
 import lstm_attack
 import hmms
-import BaumWelch
 import argparse
 import sys
 
@@ -26,19 +25,27 @@ def C(q, r, eps):
     return 2*(1-q)**2 * exp(eps)
 
 # Represents A', the result of switching q and r in A
+
+
 def A_alt(q, r, eps):
     return A(r, q, eps)
 
 # Represents B', the result of switching q and r in B
+
+
 def B_alt(q, r, eps):
     return B(r, q, eps)
 
 # Represents C', the result of switching q and r in B
+
+
 def C_alt(q, r, eps):
     return C(r, q, eps)
 
 # Currently only returns the middle calculation, where neither rho_0 nor rho_1 are 0.5
 # Returns (rho_0, rho_1)
+
+
 def min_exp_noise(q, r, eps):
     e = exp(eps)
     a = A(q, r, eps)
@@ -63,29 +70,30 @@ def min_exp_noise(q, r, eps):
     line_top = LineString([(0, 0.5), (0.5, 0.5)])
     line_right = LineString([(0.5, 0), (0.5, 0.5)])
     if abs(slope2) > abs(slope1):
-        intsect_top = line2.intersection(line_top)
-        intsect_right = line1.intersection(line_right)
+        intersect_top = line2.intersection(line_top)
+        intersect_right = line1.intersection(line_right)
     else:
-        intsect_top = line1.intersection(line_top)
-        intsect_right = line2.intersection(line_right)
-    intsect = line1.intersection(line2)
-    pts = [intsect, intsect_top, intsect_right]
+        intersect_top = line1.intersection(line_top)
+        intersect_right = line2.intersection(line_right)
+    intersect = line1.intersection(line2)
+    pts = [intersect, intersect_top, intersect_right]
     exp_noise = np.zeros((3,))
     for i, pt in enumerate(pts):
         if isinstance(pt, Point):
             exp_noise[i] = pt.x * r/(q+r) + pt.y * q/(q+r)
         else:
             exp_noise[i] = float('inf')
-    # return intsect.x, intsect.y
-    print(exp_noise)
     min_pt = pts[np.argmin(exp_noise)]
     return min_pt.x, min_pt.y
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--no_for_loop", dest="no_for_loop",
                         action="store_true")
     parser.add_argument("--eps", dest="eps", type=float, default=0.2)
+    parser.add_argument("--input", dest="input", type=str,
+                        default="data/normal/N8")
     parser.add_argument("--output", dest="output_prefix", type=str,
                         default="real_data_output")
     args = parser.parse_args()
@@ -110,8 +118,7 @@ if __name__ == "__main__":
         lines = f.read().splitlines()
         lines = [item.split(' ')[1] for item in lines]
     data = np.array(lines, dtype=float)
-    print(len(data))
-    # data = data[0:len(data):2]
+
     avg = np.average(data)
     # state 0 (aka False) indicates rest state
     binary_dat = np.array([item >= avg for item in data])
@@ -129,7 +136,7 @@ if __name__ == "__main__":
         True, False)]/(transition_counts[(True, False)] + transition_counts[(True, True)])
     print('(q, r):', (q, r), file=sys.stderr)
     print('(q, r):', (q, r), file=log_fd)
-    
+
     with open(output, "a+") as f:
         f.write(f"eps, viterbi_accuracy, lstm_accuracy\n")
     for eps in lst_eps:
