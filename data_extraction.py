@@ -25,30 +25,22 @@ def C(q, r, eps):
 
 
 # Represents A', the result of switching q and r in A
-
-
 def A_alt(q, r, eps):
     return A(r, q, eps)
 
 
 # Represents B', the result of switching q and r in B
-
-
 def B_alt(q, r, eps):
     return B(r, q, eps)
 
 
 # Represents C', the result of switching q and r in B
-
-
 def C_alt(q, r, eps):
     return C(r, q, eps)
 
 
 # Currently only returns the middle calculation, where neither rho_0 nor rho_1 are 0.5
-# Returns (rho_0, rho_1)
-
-
+# Returns (rho_0, rho_1) as described in Corollary 1
 def min_exp_noise(q, r, eps):
     e = exp(eps)
     a = A(q, r, eps)
