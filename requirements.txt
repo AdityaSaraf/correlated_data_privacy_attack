@@ -1,4 +1,4 @@
 matplotlib==3.0.2
-numpy==1.18.1
+numpy==1.22.0
 hmms==0.1
 Shapely==1.7.0
